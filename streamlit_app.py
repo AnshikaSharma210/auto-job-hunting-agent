@@ -230,7 +230,10 @@ button[data-testid="stFileUploaderDeleteBtn"]{display:none}
 .metric-card .val{font-size:1.5rem;font-weight:800;color:#a5b4fc}
 .metric-card .lbl{font-size:.68rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}
 .done-badge{background:#14532d;color:#86efac;border-radius:999px;padding:3px 10px;font-size:.75rem;font-weight:600}
-#MainMenu,footer,header{visibility:hidden}
+#MainMenu,footer,header{display:none!important}
+/* mobile: add bottom padding so content clears the browser nav bar */
+.block-container{padding-bottom:80px!important}
+@media(max-width:768px){.block-container{padding-bottom:100px!important}}
 section[data-testid="stSidebar"]{background:#0c1222!important;border-right:1px solid #1e293b}
 /* compact file uploader drop zone */
 div[data-testid="stFileUploader"] section{padding:14px 16px!important;min-height:64px!important;border-radius:10px!important;border:1.5px dashed #475569!important;display:flex!important;align-items:center!important;justify-content:center!important}
@@ -830,13 +833,6 @@ if is_supabase_configured() and (uid := _sb_uid()):
                 _pipeline_obj.resume_store.ingest_text(_meta["raw_text"])
             except Exception:
                 pass
-            # Restore roles/years to session state
-            if _meta.get("roles"):
-                _saved_roles = [r.strip() for r in _meta["roles"].split(",") if r.strip()]
-                for i, r in enumerate(_saved_roles[:3]):
-                    st.session_state[f"resume_role_{i+1}"] = r
-            if _meta.get("years_experience"):
-                st.session_state["resume_years"] = str(_meta["years_experience"])
 
 pipeline = _pipeline_obj
 applications = _load_applications_all()
@@ -1186,11 +1182,26 @@ with tab_resume:
 _goto = st.session_state.pop("_goto_discover", False)
 if _goto:
     _components.html(
-        """<script>
-(function(){
-  var tabs=window.parent.document.querySelectorAll('button[role=tab]');
-  if(tabs&&tabs[1]){tabs[1].click();}
-})();
+        f"""<script>
+(function(){{
+  // Works on both desktop (iframe) and mobile (direct window)
+  function getDoc() {{
+    try {{ return window.parent.document; }} catch(e) {{ return window.document; }}
+  }}
+  function switchTab() {{
+    var doc = getDoc();
+    var tabs = doc.querySelectorAll('button[role=tab]');
+    if (tabs && tabs.length > 1) {{ tabs[1].click(); return true; }}
+    return false;
+  }}
+  // Retry up to 5 times with increasing delays to handle slow mobile renders
+  var attempts = 0;
+  function trySwitch() {{
+    if (switchTab() || attempts++ >= 5) return;
+    setTimeout(trySwitch, 150 * attempts);
+  }}
+  setTimeout(trySwitch, 100);
+}})();
 </script>""",
         height=0,
     )
