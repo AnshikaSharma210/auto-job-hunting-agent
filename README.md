@@ -6,8 +6,11 @@
 [![Google Gemini](https://img.shields.io/badge/LLM-Google%20Gemini-4285F4?logo=google&logoColor=white)](https://aistudio.google.com/)
 [![FAISS](https://img.shields.io/badge/Vector%20Store-FAISS-orange)](https://faiss.ai/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Live App](https://img.shields.io/badge/🚀%20Live%20App-autojobhuntingagent.streamlit.app-6366f1)](https://autojobhuntingagent.streamlit.app/)
 
 > An intelligent job-hunting copilot that scores your resume like an **ATS**, discovers and **ranks openings by hiring chance**, and guides a fully human-in-the-loop application workflow — complete with AI-drafted cover letters and a built-in application tracker.
+
+**[▶ Try it live → autojobhuntingagent.streamlit.app](https://autojobhuntingagent.streamlit.app/)**
 
 ---
 
@@ -18,7 +21,7 @@ Applying to jobs is time-consuming and opaque. Most people either mass-apply (lo
 Key design choices:
 - **No blind mass-apply.** You review, shortlist, and confirm every application.
 - **Free to run.** Default stack uses Google Gemini's free tier + local sentence-transformer embeddings.
-- **Deployable.** Works on Streamlit Community Cloud with a Bring Your Own Key (BYOK) model — zero hosting cost.
+- **Multi-user cloud deployment.** Login with email, data persists per account via Supabase — no setup needed for end users.
 
 ---
 
@@ -39,7 +42,7 @@ Key design choices:
 
 > Run locally with `streamlit run streamlit_app.py` — see [Quick start](#quick-start) below.
 
-The app opens at `http://localhost:8501` with a dark, professional UI.
+The app opens at `https://autojobhuntingagent.streamlit.app/` with a dark, professional UI.
 
 ---
 
@@ -114,7 +117,7 @@ cp .env.example .env
 streamlit run streamlit_app.py
 ```
 
-Open **http://localhost:8501**.
+Open **https://autojobhuntingagent.streamlit.app/**.
 
 ---
 
@@ -155,18 +158,23 @@ JSEARCH_API_KEY=your_rapidapi_key
 
 ## Deploying to Streamlit Community Cloud
 
-1. Fork or push this repo to your GitHub account.
-2. Go to [share.streamlit.io](https://share.streamlit.io) → **New app** → select `streamlit_app.py`.
-3. Under **Advanced settings → Secrets**, add the same keys as your `.env`.
-4. Click **Deploy** — no Selenium, no Chrome, no server setup required.
+The app is **already live** at [autojobhuntingagent.streamlit.app](https://autojobhuntingagent.streamlit.app/).
 
-### Multi-user hosting (Bring Your Own Key)
+To deploy your own instance:
+1. Fork this repo to your GitHub account.
+2. Create a free [Supabase](https://supabase.com) project — run `supabase_schema.sql` in the SQL editor.
+3. Go to [share.streamlit.io](https://share.streamlit.io) → **New app** → select `streamlit_app.py`.
+4. Under **Advanced settings → Secrets**, add your keys (see `.streamlit/secrets.toml.example`).
+5. Click **Deploy** — no Selenium, no Chrome, no server setup required.
 
-When the app is publicly shared, each visitor uses their **own free Gemini API key** entered in the sidebar — not yours. Your deployment costs nothing extra:
+### Multi-user login & persistent storage
 
-- Keys are stored only in the visitor's browser session (never persisted to disk or sent to any backend).
-- Each user gets the full Gemini free tier (1,500 requests/day, 1M tokens/day).
-- Getting a free key takes under 60 seconds at [aistudio.google.com](https://aistudio.google.com/app/apikey).
+The hosted app uses **Supabase** for authentication and storage:
+
+- Users sign up with email — no API keys or setup required on their end.
+- Each user's resume, shortlist, and applications are stored privately in Supabase (isolated per account).
+- Data persists across sessions and devices — upload your resume once and it's there next time you log in.
+- The host's Groq and Google API keys are shared silently — users get full AI features out of the box.
 
 ---
 
