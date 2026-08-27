@@ -18,17 +18,29 @@ def _strip_or_none(v: str | None) -> str | None:
     return s or None
 
 
-def _env_lower(name: str, default: str) -> str:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    s = raw.strip().lower()
-    return s if s else default
+def _env_or_secret(name: str, default: str = "") -> str:
+    """Read from .env first, then st.secrets (Streamlit Cloud), then default."""
+    val = os.getenv(name, "").strip()
+    if val:
+        return val
+    try:
+        import streamlit as st  # noqa: PLC0415
+        secret = st.secrets.get(name, "")
+        if secret:
+            return str(secret).strip()
+    except Exception:
+        pass
+    return default
+
+
+def _env_or_secret_lower(name: str, default: str) -> str:
+    raw = _env_or_secret(name, "")
+    return raw.lower() if raw else default
 
 
 def _resolved_embedding_provider() -> str:
     """Default local embeddings to save Gemini quota; google only when explicitly set."""
-    return _env_lower("EMBEDDING_PROVIDER", "local")
+    return _env_or_secret_lower("EMBEDDING_PROVIDER", "local")
 
 
 @dataclass(frozen=True)
@@ -37,10 +49,9 @@ class Settings:
     llm_provider: str
 
     # ── Embedding provider: "google" | "openai" | "local" ───────────────
-    # "google" uses gemini-embedding-001 via the same key as the chat model.
     embedding_provider: str
 
-    # ── OpenAI (only when llm_provider / embedding_provider = "openai") ─
+    # ── OpenAI ───────────────────────────────────────────────────────────
     openai_api_key: str | None
     openai_chat_model: str
     openai_embedding_model: str
@@ -49,7 +60,7 @@ class Settings:
     google_api_key: str | None
     google_chat_model: str
 
-    # ── Offline embeddings (only when embedding_provider = "local") ─────
+    # ── Offline embeddings ───────────────────────────────────────────────
     local_embedding_model: str
 
     # ── Job search ───────────────────────────────────────────────────────
@@ -62,25 +73,53 @@ class Settings:
     max_llm_rankings: int
     max_upload_bytes: int
 
+    # ── Extended sources (free, no auth) ─────────────────────────────────
+    enable_remotive: bool
+    enable_company_careers: bool
+    company_list_extra: str
+
+    # ── Groq (free, no daily quota — sign up at console.groq.com) ────────
+    groq_api_key: str | None
+    groq_model: str
+
+    # ── Supabase (cloud multi-user mode) ─────────────────────────────────
+    # Required for login + per-user persistence on hosted deployment.
+    # Leave blank for local single-user development.
+    supabase_url: str | None
+    supabase_anon_key: str | None
+
 
 def _build_settings() -> Settings:
+    def _s(name: str, default: str = "") -> str:
+        return _env_or_secret(name, default)
+
+    def _sn(name: str) -> str | None:
+        return _strip_or_none(_env_or_secret(name)) or None
+
     return Settings(
-        llm_provider=_env_lower("LLM_PROVIDER", "google"),
+        llm_provider=_env_or_secret_lower("LLM_PROVIDER", "google"),
         embedding_provider=_resolved_embedding_provider(),
-        openai_api_key=_strip_or_none(os.getenv("OPENAI_API_KEY")),
-        openai_chat_model=os.getenv("OPENAI_CHAT_MODEL", "gpt-4o").strip(),
-        openai_embedding_model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small").strip(),
-        google_api_key=_strip_or_none(os.getenv("GOOGLE_API_KEY")),
-        google_chat_model=os.getenv("GOOGLE_CHAT_MODEL", "gemini-2.5-flash").strip(),
-        local_embedding_model=os.getenv("LOCAL_EMBEDDING_MODEL", "all-MiniLM-L6-v2").strip(),
-        job_source=_env_lower("JOB_SOURCE", "mock"),
-        adzuna_app_id=_strip_or_none(os.getenv("ADZUNA_APP_ID")),
-        adzuna_app_key=_strip_or_none(os.getenv("ADZUNA_APP_KEY")),
-        adzuna_country=os.getenv("ADZUNA_COUNTRY", "in").strip() or "in",
-        jsearch_api_key=_strip_or_none(os.getenv("JSEARCH_API_KEY")),
-        max_results=int(os.getenv("MAX_RESULTS", "10")),
-        max_llm_rankings=int(os.getenv("MAX_LLM_RANKINGS", "5")),
-        max_upload_bytes=int(os.getenv("MAX_UPLOAD_MB", "2")) * 1024 * 1024,
+        openai_api_key=_sn("OPENAI_API_KEY"),
+        openai_chat_model=_s("OPENAI_CHAT_MODEL", "gpt-4o"),
+        openai_embedding_model=_s("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+        google_api_key=_sn("GOOGLE_API_KEY"),
+        google_chat_model=_s("GOOGLE_CHAT_MODEL", "gemini-2.5-flash"),
+        local_embedding_model=_s("LOCAL_EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
+        job_source=_env_or_secret_lower("JOB_SOURCE", "multi"),
+        adzuna_app_id=_sn("ADZUNA_APP_ID"),
+        adzuna_app_key=_sn("ADZUNA_APP_KEY"),
+        adzuna_country=_s("ADZUNA_COUNTRY", "in") or "in",
+        jsearch_api_key=_sn("JSEARCH_API_KEY"),
+        max_results=int(_s("MAX_RESULTS", "20")),
+        max_llm_rankings=int(_s("MAX_LLM_RANKINGS", "5")),
+        max_upload_bytes=int(_s("MAX_UPLOAD_MB", "2")) * 1024 * 1024,
+        enable_remotive=_env_or_secret_lower("ENABLE_REMOTIVE", "true") == "true",
+        enable_company_careers=_env_or_secret_lower("ENABLE_COMPANY_CAREERS", "true") == "true",
+        company_list_extra=_s("COMPANY_LIST_EXTRA", ""),
+        groq_api_key=_sn("GROQ_API_KEY"),
+        groq_model=_s("GROQ_MODEL", "llama-3.3-70b-versatile"),
+        supabase_url=_sn("SUPABASE_URL"),
+        supabase_anon_key=_sn("SUPABASE_ANON_KEY"),
     )
 
 

@@ -9,3 +9,4 @@ font = "sans serif"
 [server]
 headless = true
 maxUploadSize = 2
+fileWatcherType = "none"

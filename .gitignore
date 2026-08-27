@@ -12,4 +12,5 @@ chroma_data/
 .idea/
 .vscode/
 streamlit_secrets.toml
+.streamlit/secrets.toml
 .data/

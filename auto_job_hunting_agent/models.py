@@ -41,11 +41,11 @@ class ATSResumeScore(BaseModel):
     missing_keywords: list[str] = Field(default_factory=list)
     gaps: list[str] = Field(default_factory=list)
     improvements: list[str] = Field(default_factory=list)
-    # Enhanced fields from LLM analysis
     role_readiness: str = Field(default="", description="e.g. 'Strong Mid-level', 'Junior — needs 1 more year'")
     critical_missing: list[str] = Field(default_factory=list, description="Must-have skills absent from resume")
     present_strengths: list[str] = Field(default_factory=list, description="Resume highlights relevant to the role")
     hiring_prospect: str = Field(default="", description="Plain-English hiring outlook for this role")
+    analysis_type: str = Field(default="ai", description="'ai' or 'heuristic'")
 
 
 class JobMatchResult(BaseModel):

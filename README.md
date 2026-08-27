@@ -27,9 +27,9 @@ Key design choices:
 | # | Tab | What it does |
 |---|-----|-------------|
 | 1 | **Resume & ATS** | Upload PDF/TXT (≤ 2 MB). Receive an ATS-style score per target role — keyword gaps, formatting signals, hiring prospect, and actionable improvement tips. |
-| 2 | **Discover Roles** | Search up to 3 job titles simultaneously. Filter by Remote / Hybrid / On-site, city, and years of experience. |
-| 3 | **Ranked Listings** | Every result gets a **hiring chance %** and sub-scores: resume fit, company brand, growth, flexibility, compensation fit, and work environment. Paginated results (5 per page). |
-| 4 | **Shortlist** | Bookmark roles you're interested in — they persist across searches. |
+| 2 | **Discover Roles** | Search up to 3 job titles simultaneously across **5 sources** (LinkedIn/Indeed/Naukri via JSearch, Adzuna, Remotive, and 70+ company career pages). Filter by Remote / Hybrid / On-site, city, and years of experience. |
+| 3 | **Ranked Listings** | Every result gets a **hiring chance %** and sub-scores: resume fit, company brand, growth, flexibility, compensation fit, and work environment. Paginated results (5 per page) with a **source badge** showing where each role came from. |
+| 4 | **Shortlist** | Bookmark roles you're interested in. Click **"Tailor resume for this role"** to get: keywords to add, existing bullet points to emphasise, and a ready-to-paste tailored summary paragraph. |
 | 5 | **Apply** | AI generates a tailored cover letter for each role. Open the listing, review, confirm to log the application. |
 | 6 | **My Applications** | Track every application: company, role, date applied, and current status (Applied → Interview → Offer → Rejected). |
 
@@ -53,7 +53,7 @@ The app opens at `http://localhost:8501` with a dark, professional UI.
 | **Embeddings** | `all-MiniLM-L6-v2` via `sentence-transformers` (local, free) · Google / OpenAI (optional) |
 | **Vector store** | FAISS (in-memory, no native build on Windows) |
 | **Resume parsing** | `PyMuPDF` for PDF extraction |
-| **Job data** | JSearch (LinkedIn/Indeed/Glassdoor via RapidAPI) · Adzuna · mock demo data |
+| **Job data** | JSearch (LinkedIn/Indeed/Glassdoor via RapidAPI) · Adzuna · Remotive · 70+ company career pages (Greenhouse / Lever / Ashby) · mock demo data |
 | **Persistence** | Local JSON under `.data/` (gitignored) |
 | **SSL handling** | `truststore` for corporate proxy compatibility |
 
@@ -129,11 +129,14 @@ Copy `.env.example` to `.env` and fill in the values you need.
 | `GOOGLE_API_KEY` | — | Free key from [Google AI Studio](https://aistudio.google.com/app/apikey) |
 | `GOOGLE_CHAT_MODEL` | `gemini-2.0-flash` | Gemini model for scoring & letters |
 | `OPENAI_API_KEY` | — | Only required when `LLM_PROVIDER=openai` |
-| `JOB_SOURCE` | `mock` | `mock` · `jsearch` · `adzuna` |
+| `JOB_SOURCE` | `multi` | `multi` (all sources) · `jsearch` · `adzuna` · `mock` |
 | `JSEARCH_API_KEY` | — | [RapidAPI JSearch](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch) key |
 | `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | — | [Adzuna developer](https://developer.adzuna.com/) credentials |
-| `MAX_RESULTS` | `10` | Max jobs fetched per search query |
-| `MAX_LLM_RANKINGS` | `5` | Max Gemini ranking calls per search (rest use local scoring) |
+| `ENABLE_REMOTIVE` | `true` | Include remote-only roles from Remotive (free, no key) |
+| `ENABLE_COMPANY_CAREERS` | `true` | Query 70+ company career pages via Greenhouse / Lever / Ashby (free, no key) |
+| `COMPANY_LIST_EXTRA` | — | Add custom companies: `"MyCompany:greenhouse:mycompany-slug,..."` |
+| `MAX_RESULTS` | `20` | Max jobs returned per search |
+| `MAX_LLM_RANKINGS` | `3` | Max Gemini ranking calls per search (rest use local scoring) |
 | `MAX_UPLOAD_MB` | `2` | Resume upload size cap |
 | `LOCAL_EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | `sentence-transformers` model name |
 

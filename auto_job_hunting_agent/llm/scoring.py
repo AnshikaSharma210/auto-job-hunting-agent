@@ -20,31 +20,38 @@ Your tasks:
 Return structured output matching the schema exactly."""
 
 
-def _build_llm() -> BaseChatModel:
-    if SETTINGS.llm_provider == "google":
-        gkey = (SETTINGS.google_api_key or os.getenv("GOOGLE_API_KEY") or "").strip()
-        if not gkey:
+def _build_llm(temperature: float = 0.2) -> BaseChatModel:
+    """Build an LLM using the configured provider. Uses key rotation for Google."""
+    if SETTINGS.llm_provider == "groq":
+        from langchain_groq import ChatGroq
+        key = (SETTINGS.groq_api_key or os.getenv("GROQ_API_KEY") or "").strip()
+        if not key:
             raise RuntimeError(
-                "GOOGLE_API_KEY is not set. "
-                "Get a free key at https://aistudio.google.com/app/apikey"
+                "GROQ_API_KEY is not set. Get a free key at https://console.groq.com"
             )
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        return ChatGoogleGenerativeAI(
-            model=SETTINGS.google_chat_model,
-            google_api_key=gkey,
-            temperature=0.2,
-            convert_system_message_to_human=True,
-        )
-    # fallback: OpenAI
+        return ChatGroq(model=SETTINGS.groq_model, groq_api_key=key, temperature=temperature)
+
+    if SETTINGS.llm_provider == "google":
+        from auto_job_hunting_agent.llm.key_manager import build_google_llm_with_rotation
+        return build_google_llm_with_rotation(SETTINGS.google_chat_model, temperature)
+
+    # OpenAI fallback
     okey = (SETTINGS.openai_api_key or os.getenv("OPENAI_API_KEY") or "").strip()
     if not okey:
         raise RuntimeError("OPENAI_API_KEY is not set.")
     from langchain_openai import ChatOpenAI
-    return ChatOpenAI(
-        model=SETTINGS.openai_chat_model,
-        temperature=0.2,
-        api_key=okey,
-    )
+    return ChatOpenAI(model=SETTINGS.openai_chat_model, temperature=temperature, api_key=okey)
+
+
+def _invoke_llm(messages: list, temperature: float = 0.2):
+    """
+    Invoke the LLM with automatic key rotation on quota errors (Google only).
+    For OpenAI, delegates directly to _build_llm.
+    """
+    if SETTINGS.llm_provider == "google":
+        from auto_job_hunting_agent.llm.key_manager import invoke_with_key_rotation
+        return invoke_with_key_rotation(messages, SETTINGS.google_chat_model, temperature)
+    return _build_llm(temperature).invoke(messages)
 
 
 def score_job_against_resume(job: JobPosting, structured_resume_context: str) -> FitScore:

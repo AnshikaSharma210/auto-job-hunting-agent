@@ -30,7 +30,9 @@ def search_jsearch_jobs(
         )
 
     n = max_results or SETTINGS.max_results
-    query = f"{role.strip()} in {location.strip()}"
+    # Clean query: "SDE Pune" not "SDE in remote" — location is already a city/region
+    location_clean = location.strip()
+    query = f"{role.strip()} {location_clean}" if location_clean else role.strip()
 
     headers = {
         "X-RapidAPI-Key": SETTINGS.jsearch_api_key,
