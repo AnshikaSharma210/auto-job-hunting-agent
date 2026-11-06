@@ -19,15 +19,36 @@ _client: Any = None
 # ── Availability check ────────────────────────────────────────────────────────
 
 def is_supabase_configured() -> bool:
-    """True when both SUPABASE_URL and SUPABASE_ANON_KEY are present."""
+    """True when Supabase URL + anon key are present and pass validation."""
+    return supabase_config_error() == ""
+
+
+def supabase_secrets_present() -> bool:
+    """True if any Supabase env/secret was set (even if invalid)."""
     try:
         from auto_job_hunting_agent.config import SETTINGS
+
         return bool(
             getattr(SETTINGS, "supabase_url", None)
-            and getattr(SETTINGS, "supabase_anon_key", None)
+            or getattr(SETTINGS, "supabase_anon_key", None)
         )
     except Exception:
         return False
+
+
+def supabase_config_error() -> str:
+    """Empty if OK; otherwise a short message for the login / admin UI."""
+    try:
+        from auto_job_hunting_agent.config import SETTINGS
+        from auto_job_hunting_agent.supabase_config import validate_supabase_config
+
+        ok, msg = validate_supabase_config(
+            getattr(SETTINGS, "supabase_url", None),
+            getattr(SETTINGS, "supabase_anon_key", None),
+        )
+        return "" if ok else msg
+    except Exception:
+        return ""
 
 
 def get_client() -> Any:
@@ -35,6 +56,9 @@ def get_client() -> Any:
     global _client
     if _client is not None:
         return _client
+    err = supabase_config_error()
+    if err:
+        raise ValueError(err)
     from supabase import create_client
     from auto_job_hunting_agent.config import SETTINGS
     _client = create_client(SETTINGS.supabase_url, SETTINGS.supabase_anon_key)
@@ -246,4 +270,32 @@ def _clean_error(exc: Exception) -> str:
         return "Please check your email and click the confirmation link first."
     if "Password should be" in msg:
         return "Password must be at least 6 characters."
+    low = msg.lower()
+    if any(
+        x in low
+        for x in (
+            "project is paused",
+            "project is inactive",
+            "project not found",
+            "paused project",
+            "database is paused",
+            "service unavailable",
+        )
+    ) or "503" in msg:
+        return (
+            "Your Supabase project is paused or still waking up. "
+            "Open supabase.com → your project → Restore / Resume project, wait 1–2 minutes, then try again."
+        )
+    if (
+        "getaddrinfo" in low
+        or "name or service not known" in low
+        or "errno -2" in low
+        or "11001" in msg
+        or "nodename nor servname" in low
+    ):
+        return (
+            "Cannot reach Supabase — the project URL in this app's secrets is wrong or still a placeholder. "
+            "On Streamlit Cloud: open your app → Settings → Secrets and set SUPABASE_URL to the exact "
+            "Project URL from Supabase → Project Settings → API (https://YOUR_REF.supabase.co), then reboot the app."
+        )
     return msg.split("(")[0].strip()

@@ -99,6 +99,12 @@ streamlit_app.py                  # UI + session management + Supabase sync
 
 **[autojobhuntingagent.streamlit.app](https://autojobhuntingagent.streamlit.app/)** — sign up with email, no API keys needed.
 
+On the **free Streamlit Community Cloud** tier, the app **sleeps after ~15 minutes** with no visitors. The first open after that shows “Starting…” for up to a minute — that is normal, not a bug.
+
+On **Supabase free tier**, projects **auto-pause after inactivity** (often ~7 days). If login or save fails, open the Supabase dashboard and **Resume project**; data is kept.
+
+To reduce wake-up waits for friends, share the link and ask them to wait on the loading screen once. Always-on hosting requires a paid Streamlit plan or self-hosting; keeping Supabase awake requires Supabase Pro or regular project use.
+
 ---
 
 ## License
